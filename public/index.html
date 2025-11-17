@@ -20,18 +20,18 @@
 
     .header {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
 
     .title {
-      font-size: 32px;
+      font-size: 30px;
       font-weight: 800;
       letter-spacing: 4px;
       color: #153e9f;
     }
 
     .subtitle {
-      margin-top: 8px;
+      margin-top: 6px;
       font-size: 13px;
       color: #777;
     }
@@ -39,22 +39,22 @@
     .search-box {
       background: #fff;
       border-radius: 12px;
-      padding: 20px 20px 16px;
+      padding: 18px 18px 14px;
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10);
       border: 1px solid #e2e8f0;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
     .search-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
     }
 
     .search-row input[type="text"] {
       flex: 1 1 220px;
-      padding: 10px 12px;
+      padding: 9px 12px;
       border-radius: 8px;
       border: 1px solid #cbd5e1;
       font-size: 14px;
@@ -76,7 +76,7 @@
     }
 
     .search-row button {
-      padding: 10px 20px;
+      padding: 9px 18px;
       border-radius: 8px;
       border: none;
       background: #2563eb;
@@ -202,17 +202,16 @@
   <div class="wrap">
     <header class="header">
       <div class="title">지원지니 🔍</div>
-      <div class="subtitle">키워드로 정책을 찾고, 필터로 빠르게 좁혀보는 정책 검색 도우미</div>
+      <div class="subtitle">키워드 + 카테고리로 한 번에 찾는 정책 검색 도우미</div>
     </header>
 
     <section class="search-box">
       <div class="search-row">
-        <input id="queryInput" type="text" placeholder="검색어를 입력하세요 (예: 청년, 외식, 경기)" />
+        <input id="queryInput" type="text" placeholder="검색어 (예: 청년, 외식, 경기)" />
 
         <select id="categorySelect">
           <option value="">전체 유형</option>
           <option value="청년">청년</option>
-          <option value="중장년">중장년</option>
           <option value="한부모">한부모</option>
           <option value="장애인">장애인</option>
           <option value="소상공인">소상공인</option>
@@ -228,66 +227,138 @@
         <button id="searchBtn">검색</button>
       </div>
       <div class="tips">
-        예시) <b>청년 외식</b>, <b>경기 카페</b>, <b>한부모 월세</b> 등 자유롭게 검색해 보세요.
+        👉 검색어가 없어도, <b>카테고리만 선택해도 검색</b>됩니다.
       </div>
     </section>
 
     <div id="resultInfo" class="result-info"></div>
     <section id="resultArea" class="grid"></section>
-    <div id="emptyMsg" class="empty" style="display:none;">검색 결과가 없습니다. 키워드를 바꿔서 다시 시도해 보세요.</div>
+    <div id="emptyMsg" class="empty" style="display:none;">검색 결과가 없습니다.</div>
   </div>
 
-<script>
-async function performSearch() {
-    const queryInput = document.getElementById("query");
-    const categoryInput = document.getElementById("category");
-    const resultsDiv = document.getElementById("results");
+  <script>
+    const queryInput   = document.getElementById('queryInput');
+    const categorySel  = document.getElementById('categorySelect');
+    const targetSel    = document.getElementById('targetSelect');
+    const searchBtn    = document.getElementById('searchBtn');
+    const resultArea   = document.getElementById('resultArea');
+    const resultInfo   = document.getElementById('resultInfo');
+    const emptyMsg     = document.getElementById('emptyMsg');
 
-    const queryValue = queryInput.value.trim();
-    const categoryValue = categoryInput.value.trim();
+    searchBtn.addEventListener('click', search);
+    queryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') search();
+    });
 
-    // 검색어 + 카테고리 둘 중 하나만 있어도 검색 수행
-    const finalQuery = categoryValue || queryValue;
+    async function search() {
+      const q   = queryInput.value.trim();
+      const cat = categorySel.value.trim();
+      const tgt = targetSel.value.trim();
 
-    if (!finalQuery) {
-        resultsDiv.innerHTML = `<p style="color:#ff4d4d;">카테고리를 선택하거나 검색어를 입력하세요.</p>`;
+      // ✅ 완전 빈 상태만 막기 (검색어도 없고, 카테고리/대상도 없을 때)
+      if (!q && !cat && !tgt) {
+        alert('검색어 또는 카테고리/대상 중 하나는 선택해 주세요.');
+        queryInput.focus();
         return;
+      }
+
+      resultInfo.textContent = '검색 중...';
+      resultArea.innerHTML   = '';
+      emptyMsg.style.display = 'none';
+
+      try {
+        const params = new URLSearchParams();
+        if (q)   params.set('q', q);
+        if (cat) params.set('category', cat);
+        if (tgt) params.set('targetType', tgt);
+
+        const res  = await fetch('/api/search?' + params.toString());
+        if (!res.ok) throw new Error('검색 API 오류: ' + res.status);
+
+        const data = await res.json();
+        const list = data.results || [];
+
+        let infoText = `총 ${data.count || list.length || 0}건의 정책을 찾았습니다.`;
+        if (cat) infoText += ` (카테고리: ${cat})`;
+        if (tgt) infoText += ` / 대상: ${tgt}`;
+        resultInfo.textContent = infoText;
+
+        renderResults(list);
+      } catch (err) {
+        console.error(err);
+        resultInfo.textContent = '검색 중 오류가 발생했습니다.';
+        emptyMsg.style.display = 'block';
+        emptyMsg.textContent   = '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+      }
     }
 
-    try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(finalQuery)}`);
-        const data = await response.json();
+    function renderResults(list) {
+      resultArea.innerHTML = '';
 
-        if (data.count === 0) {
-            resultsDiv.innerHTML = `<p style="color:#aaa;">검색 결과가 없습니다.</p>`;
-            return;
+      if (!list.length) {
+        emptyMsg.style.display = 'block';
+        emptyMsg.textContent   = '검색 결과가 없습니다. 조건을 바꾸어 다시 검색해 보세요.';
+        return;
+      }
+
+      emptyMsg.style.display = 'none';
+
+      list.forEach(item => {
+        const card = document.createElement('article');
+        card.className = 'card';
+
+        const title = document.createElement('div');
+        title.className = 'card-title';
+        title.textContent = item.title || '제목 없음';
+        card.appendChild(title);
+
+        const chipRow = document.createElement('div');
+        chipRow.className = 'chip-row';
+
+        if (item.region) {
+          const c = document.createElement('div');
+          c.className = 'chip';
+          c.textContent = item.region;
+          chipRow.appendChild(c);
         }
 
-        resultsDiv.innerHTML = data.results
-            .map(item => `
-                <div class="item">
-                    <h3>${item.title || "제목 없음"}</h3>
-                    <p><strong>대상:</strong> ${item.target}</p>
-                    <p><strong>지원금/혜택:</strong> ${item.budget}</p>
-                    <p><strong>마감일:</strong> ${item.deadline}</p>
-                </div>
-            `)
-            .join("");
-    } catch (err) {
-        resultsDiv.innerHTML = `<p style="color:red;">검색 실패: ${err}</p>`;
+        if (item.category) {
+          const c = document.createElement('div');
+          c.className = 'chip';
+          c.textContent = item.category;
+          chipRow.appendChild(c);
+        }
+
+        if (item.target_type) {
+          const c = document.createElement('div');
+          c.className = 'chip';
+          c.textContent = item.target_type;
+          chipRow.appendChild(c);
+        }
+
+        card.appendChild(chipRow);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = `
+          <span><b>대상</b> : ${item.target || '-'}</span>
+          <span><b>산업분야</b> : ${item.industry || '-'}</span>
+          <span><b>예산</b> : ${item.budget || '-'}</span>
+          <span><b>유형</b> : ${item.benefit_type || '-'}</span>
+          <span class="deadline"><b>마감</b> : ${item.deadline || '상시 / 미정'}</span>
+        `;
+        card.appendChild(meta);
+
+        if (item.link) {
+          const link = document.createElement('div');
+          link.className = 'link';
+          link.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener noreferrer">상세보기</a>`;
+          card.appendChild(link);
+        }
+
+        resultArea.appendChild(card);
+      });
     }
-}
-
-// 검색 창 입력 시 바로 검색
-document.getElementById("query").addEventListener("input", performSearch);
-
-// 카테고리 선택만 해도 검색 자동 실행
-document.getElementById("category").addEventListener("change", performSearch);
-
-// Enter 키로 검색 실행
-document.getElementById("query").addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
-        performSearch();
-    }
-});
-</script>
+  </script>
+</body>
+</html>
