@@ -1,69 +1,41 @@
 import express from "express";
 import path from "path";
-import fetch from "node-fetch";
-import cors from "cors";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
 const app = express();
-app.use(cors());
-app.use(express.static(path.resolve()));
+const PORT = process.env.PORT || 10000;  // ← Render는 PORT, 로컬은 10000 사용
 
-const CSV_URL =
-  "https://docs.google.com/spreadsheets/d/1YtAuoDVMAvS6djbGGMkZsAKdfyYOHj_PcB_tQjSt5UU/export?format=csv";
+// 경로 설정
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-function parseCSV(text) {
-  const lines = text.split("\n");
-  const header = lines[0].split(",").map(h => h.trim());
-  const results = [];
+// 정적 파일 경로 설정 (public 폴더)
+app.use(express.static(path.join(__dirname, "public")));
 
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",");
-    if (cols.length < header.length) continue;
-
-    const row = {};
-    header.forEach((h, idx) => {
-      row[h] = cols[idx] ? cols[idx].trim() : "";
-    });
-
-    results.push(row);
+// 정책 데이터 불러오기
+function loadPolicies() {
+  try {
+    const data = fs.readFileSync("./policies.json", "utf8");
+    return JSON.parse(data);
+  } catch (err) {
+    console.error("❌ 정책 파일 로드 오류:", err);
+    return [];
   }
-  return results;
 }
 
-app.get("/api/search", async (req, res) => {
-  try {
-    const q = req.query.q?.toLowerCase() || "";
-    const category = req.query.category?.toLowerCase() || "";
-
-    const r = await fetch(CSV_URL);
-    const raw = await r.text();
-    const data = parseCSV(raw);
-
-    const filtered = data.filter(item => {
-      const title = (item.program_title || "").toLowerCase();
-      const cat = (item.category || "").toLowerCase();
-      const target = (item.target || "").toLowerCase();
-      const region = (item.region || "").toLowerCase();
-
-      const keywordMatch =
-        title.includes(q) ||
-        target.includes(q) ||
-        region.includes(q);
-
-      const categoryMatch = category ? cat.includes(category) : true;
-
-      return keywordMatch && categoryMatch;
-    });
-
-    res.json({ count: filtered.length, results: filtered });
-  } catch (err) {
-    res.status(500).json({ error: "Search failed", detail: err.message });
-  }
+// 정책 전체 제공
+app.get("/policies.json", (req, res) => {
+  const policies = loadPolicies();
+  res.json(policies);
 });
 
+// 메인 페이지
 app.get("/", (req, res) => {
-  res.sendFile(path.resolve("index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.listen(10000, () => {
-  console.log("지원지니 running on port 10000");
+// 서버 실행
+app.listen(PORT, () => {
+  console.log(`지원지니 running on port ${PORT}`);
 });
