@@ -1,57 +1,69 @@
-// app.js — GrantGenie 2.0 (Render 완벽 호환 버전)
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import express from "express";
+import path from "path";
+import fetch from "node-fetch";
+import cors from "cors";
 
 const app = express();
 app.use(cors());
-app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(path.resolve()));
 
-// ✅ 헬스 체크 (Render가 앱 살아있는지 확인용)
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
+const CSV_URL =
+  "https://docs.google.com/spreadsheets/d/1YtAuoDVMAvS6djbGGMkZsAKdfyYOHj_PcB_tQjSt5UU/export?format=csv";
 
-// ✅ 홈화면
-app.get('/', (req, res) => {
-  res.send(`
-    <h2>지원지니 웹 검색</h2>
-    <p>정상 작동 중 ✅</p>
-    <p>예시: <a href="/api/search?q=청년">/api/search?q=청년</a></p>
-  `);
-});
+function parseCSV(text) {
+  const lines = text.split("\n");
+  const header = lines[0].split(",").map(h => h.trim());
+  const results = [];
 
-// ✅ 정책 검색 API
-app.get('/api/search', (req, res) => {
-  const q = (req.query.q || '').toLowerCase().trim();
-  const filePath = path.join(__dirname, 'policies.json');
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(",");
+    if (cols.length < header.length) continue;
 
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: '데이터 파일 없음' });
+    const row = {};
+    header.forEach((h, idx) => {
+      row[h] = cols[idx] ? cols[idx].trim() : "";
+    });
+
+    results.push(row);
   }
+  return results;
+}
 
-  const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  const results = data.filter(item =>
-    Object.values(item).some(v =>
-      String(v).toLowerCase().includes(q)
-    )
-  );
+app.get("/api/search", async (req, res) => {
+  try {
+    const q = req.query.q?.toLowerCase() || "";
+    const category = req.query.category?.toLowerCase() || "";
 
-  res.json({
-    query: q,
-    count: results.length,
-    results,
-  });
+    const r = await fetch(CSV_URL);
+    const raw = await r.text();
+    const data = parseCSV(raw);
+
+    const filtered = data.filter(item => {
+      const title = (item.program_title || "").toLowerCase();
+      const cat = (item.category || "").toLowerCase();
+      const target = (item.target || "").toLowerCase();
+      const region = (item.region || "").toLowerCase();
+
+      const keywordMatch =
+        title.includes(q) ||
+        target.includes(q) ||
+        region.includes(q);
+
+      const categoryMatch = category ? cat.includes(category) : true;
+
+      return keywordMatch && categoryMatch;
+    });
+
+    res.json({ count: filtered.length, results: filtered });
+  } catch (err) {
+    res.status(500).json({ error: "Search failed", detail: err.message });
+  }
 });
 
-// ✅ Render 배포용 포트 설정
-const PORT = process.env.PORT || 10000; // Render 자동 포트 지원
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ GrantGenie running on port ${PORT}`);
+app.get("/", (req, res) => {
+  res.sendFile(path.resolve("index.html"));
+});
+
+app.listen(10000, () => {
+  console.log("지원지니 running on port 10000");
 });
