@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>지원지니</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: #f5f7fb;
+      color: #222;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 40px auto 60px;
+      padding: 0 16px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .title {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: #153e9f;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #777;
+    }
+
+    .search-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 20px 16px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10);
+      border: 1px solid #e2e8f0;
+      margin-bottom: 20px;
+    }
+
+    .search-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-row input[type="text"] {
+      flex: 1 1 220px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search-row input[type="text"]:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.15);
+    }
+
+    .search-row select {
+      flex: 0 0 130px;
+      padding: 9px 8px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 13px;
+      background: #f8fafc;
+    }
+
+    .search-row button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      flex: 0 0 80px;
+    }
+
+    .search-row button:hover {
+      background: #1d4ed8;
+    }
+
+    .tips {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .result-info {
+      font-size: 13px;
+      color: #6b7280;
+      margin: 6px 2px 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .meta {
+      font-size: 13px;
+      color: #4b5563;
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    .meta span {
+      display: block;
+    }
+
+    .deadline {
+      font-weight: 600;
+      color: #b91c1c;
+    }
+
+    .link {
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    .link a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .link a:hover {
+      text-decoration: underline;
+    }
+
+    .empty {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 14px;
+      margin-top: 40px;
+    }
+
+    @media (max-width: 600px) {
+      .wrap {
+        margin-top: 24px;
+      }
+      .search-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-row select,
+      .search-row button {
+        flex: 1 1 auto;
+        width: 100%;
+      }
+      .title {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="header">
+      <div class="title">지원지니 🔍</div>
+      <div class="subtitle">키워드로 정책을 찾고, 필터로 빠르게 좁혀보는 정책 검색 도우미</div>
+    </header>
+
+    <section class="search-box">
+      <div class="search-row">
+        <input id="queryInput" type="text" placeholder="검색어를 입력하세요 (예: 청년, 외식, 경기)" />
+
+        <select id="categorySelect">
+          <option value="">전체 유형</option>
+          <option value="청년">청년</option>
+          <option value="중장년">중장년</option>
+          <option value="한부모">한부모</option>
+          <option value="장애인">장애인</option>
+          <option value="소상공인">소상공인</option>
+        </select>
+
+        <select id="targetSelect">
+          <option value="">전체 대상</option>
+          <option value="개인">개인</option>
+          <option value="기업">기업</option>
+          <option value="단체">단체</option>
+        </select>
+
+        <button id="searchBtn">검색</button>
+      </div>
+      <div class="tips">
+        예시) <b>청년 외식</b>, <b>경기 카페</b>, <b>한부모 월세</b> 등 자유롭게 검색해 보세요.
+      </div>
+    </section>
+
+    <div id="resultInfo" class="result-info"></div>
+    <section id="resultArea" class="grid"></section>
+    <div id="emptyMsg" class="empty" style="display:none;">검색 결과가 없습니다. 키워드를 바꿔서 다시 시도해 보세요.</div>
+  </div>
+
+  <script>
+    const queryInput   = document.getElementById('queryInput');
+    const categorySel  = document.getElementById('categorySelect');
+    const targetSel    = document.getElementById('targetSelect');
+    const searchBtn    = document.getElementById('searchBtn');
+    const resultArea   = document.getElementById('resultArea');
+    const resultInfo   = document.getElementById('resultInfo');
+    const emptyMsg     = document.getElementById('emptyMsg');
+
+    async function search() {
+      const q     = queryInput.value.trim();
+      const cat   = categorySel.value.trim();
+      const tgt   = targetSel.value.trim();
+
+      if (!q) {
+        alert('검색어를 입력해 주세요.');
+        queryInput.focus();
+        return;
+      }
+
+      resultInfo.textContent = '검색 중...';
+      resultArea.innerHTML   = '';
+      emptyMsg.style.display = 'none';
+
+      try {
+        const params = new URLSearchParams();
+        params.set('q', q);
+        if (cat) params.set('category', cat);
+        if (tgt) params.set('targetType', tgt);
+
+        const res  = await fetch('/api/search?' + params.toString());
+        if (!res.ok) throw new Error('검색 API 오류: ' + res.status);
+
+        const data = await res.json();
+
+        resultInfo.textContent = `총 ${data.count || 0}건의 정책을 찾았습니다.`;
+        renderResults(data.results || []);
+      } catch (err) {
+        console.error(err);
+        resultInfo.textContent = '검색 중 오류가 발생했습니다.';
+        emptyMsg.style.display = 'block';
+        emptyMsg.textContent   = '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+      }
+    }
+
+    function renderResults(list) {
+      resultArea.innerHTML = '';
+
+      if (!list.length) {
+        emptyMsg.style.display = 'block';
+        emptyMsg.textContent   = '검색 결과가 없습니다. 조건을 바꾸어 다시 검색해 보세요.';
+        return;
+      }
+
+      emptyMsg.style.display = 'none';
+
+      list.forEach(item => {
+        const card = document.createElement('article');
+        card.className = 'card';
+
+        const title = document.createElement('div');
+        title.className = 'card-title';
+        title.textContent = item.title || '제목 없음';
+        card.appendChild(title);
+
+        const chipRow = document.createElement('div');
+        chipRow.className = 'chip-row';
+
+        if (item.region) {
+          const c = document.createElement('div');
+          c.className = 'chip';
+          c.textContent = item.region;
+          chipRow.appendChild(c);
+        }
+
+        if (item.category) {
+          const c = document.createElement('div');
+          c.className = 'chip';
+          c.textContent = item.category;
+          chipRow.appendChild(c);
+        }
+
+        if (item.target_type) {
+          const c = document.createElement('div');
+          c.className = 'chip';
+          c.textContent = item.target_type;
+          chipRow.appendChild(c);
+        }
+
+        card.appendChild(chipRow);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = `
+          <span><b>대상</b> : ${item.target || '-'}</span>
+          <span><b>산업분야</b> : ${item.industry || '-'}</span>
+          <span><b>예산</b> : ${item.budget || '-'}</span>
+          <span><b>유형</b> : ${item.benefit_type || '-'}</span>
+          <span class="deadline"><b>마감</b> : ${item.deadline || '상시 / 미정'}</span>
+        `;
+        card.appendChild(meta);
+
+        if (item.link) {
+          const link = document.createElement('div');
+          link.className = 'link';
+          link.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener noreferrer">상세보기</a>`;
+          card.appendChild(link);
+        }
+
+        resultArea.appendChild(card);
+      });
+    }
+
+    searchBtn.addEventListener('click', search);
+    queryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') search();
+    });
+  </script>
+</body>
+</html>
