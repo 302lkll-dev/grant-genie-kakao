@@ -237,123 +237,57 @@
     <div id="emptyMsg" class="empty" style="display:none;">검색 결과가 없습니다. 키워드를 바꿔서 다시 시도해 보세요.</div>
   </div>
 
-  <script>
-    const queryInput   = document.getElementById('queryInput');
-    const categorySel  = document.getElementById('categorySelect');
-    const targetSel    = document.getElementById('targetSelect');
-    const searchBtn    = document.getElementById('searchBtn');
-    const resultArea   = document.getElementById('resultArea');
-    const resultInfo   = document.getElementById('resultInfo');
-    const emptyMsg     = document.getElementById('emptyMsg');
+<script>
+async function performSearch() {
+    const queryInput = document.getElementById("query");
+    const categoryInput = document.getElementById("category");
+    const resultsDiv = document.getElementById("results");
 
-    async function search() {
-      const q     = queryInput.value.trim();
-      const cat   = categorySel.value.trim();
-      const tgt   = targetSel.value.trim();
+    const queryValue = queryInput.value.trim();
+    const categoryValue = categoryInput.value.trim();
 
-      if (!q) {
-        alert('검색어를 입력해 주세요.');
-        queryInput.focus();
+    // 검색어 + 카테고리 둘 중 하나만 있어도 검색 수행
+    const finalQuery = categoryValue || queryValue;
+
+    if (!finalQuery) {
+        resultsDiv.innerHTML = `<p style="color:#ff4d4d;">카테고리를 선택하거나 검색어를 입력하세요.</p>`;
         return;
-      }
-
-      resultInfo.textContent = '검색 중...';
-      resultArea.innerHTML   = '';
-      emptyMsg.style.display = 'none';
-
-      try {
-        const params = new URLSearchParams();
-        params.set('q', q);
-        if (cat) params.set('category', cat);
-        if (tgt) params.set('targetType', tgt);
-
-        const res  = await fetch('/api/search?' + params.toString());
-        if (!res.ok) throw new Error('검색 API 오류: ' + res.status);
-
-        const data = await res.json();
-
-        resultInfo.textContent = `총 ${data.count || 0}건의 정책을 찾았습니다.`;
-        renderResults(data.results || []);
-      } catch (err) {
-        console.error(err);
-        resultInfo.textContent = '검색 중 오류가 발생했습니다.';
-        emptyMsg.style.display = 'block';
-        emptyMsg.textContent   = '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-      }
     }
 
-    function renderResults(list) {
-      resultArea.innerHTML = '';
+    try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(finalQuery)}`);
+        const data = await response.json();
 
-      if (!list.length) {
-        emptyMsg.style.display = 'block';
-        emptyMsg.textContent   = '검색 결과가 없습니다. 조건을 바꾸어 다시 검색해 보세요.';
-        return;
-      }
-
-      emptyMsg.style.display = 'none';
-
-      list.forEach(item => {
-        const card = document.createElement('article');
-        card.className = 'card';
-
-        const title = document.createElement('div');
-        title.className = 'card-title';
-        title.textContent = item.title || '제목 없음';
-        card.appendChild(title);
-
-        const chipRow = document.createElement('div');
-        chipRow.className = 'chip-row';
-
-        if (item.region) {
-          const c = document.createElement('div');
-          c.className = 'chip';
-          c.textContent = item.region;
-          chipRow.appendChild(c);
+        if (data.count === 0) {
+            resultsDiv.innerHTML = `<p style="color:#aaa;">검색 결과가 없습니다.</p>`;
+            return;
         }
 
-        if (item.category) {
-          const c = document.createElement('div');
-          c.className = 'chip';
-          c.textContent = item.category;
-          chipRow.appendChild(c);
-        }
-
-        if (item.target_type) {
-          const c = document.createElement('div');
-          c.className = 'chip';
-          c.textContent = item.target_type;
-          chipRow.appendChild(c);
-        }
-
-        card.appendChild(chipRow);
-
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        meta.innerHTML = `
-          <span><b>대상</b> : ${item.target || '-'}</span>
-          <span><b>산업분야</b> : ${item.industry || '-'}</span>
-          <span><b>예산</b> : ${item.budget || '-'}</span>
-          <span><b>유형</b> : ${item.benefit_type || '-'}</span>
-          <span class="deadline"><b>마감</b> : ${item.deadline || '상시 / 미정'}</span>
-        `;
-        card.appendChild(meta);
-
-        if (item.link) {
-          const link = document.createElement('div');
-          link.className = 'link';
-          link.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener noreferrer">상세보기</a>`;
-          card.appendChild(link);
-        }
-
-        resultArea.appendChild(card);
-      });
+        resultsDiv.innerHTML = data.results
+            .map(item => `
+                <div class="item">
+                    <h3>${item.title || "제목 없음"}</h3>
+                    <p><strong>대상:</strong> ${item.target}</p>
+                    <p><strong>지원금/혜택:</strong> ${item.budget}</p>
+                    <p><strong>마감일:</strong> ${item.deadline}</p>
+                </div>
+            `)
+            .join("");
+    } catch (err) {
+        resultsDiv.innerHTML = `<p style="color:red;">검색 실패: ${err}</p>`;
     }
+}
 
-    searchBtn.addEventListener('click', search);
-    queryInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') search();
-    });
-  </script>
-</body>
-</html>
+// 검색 창 입력 시 바로 검색
+document.getElementById("query").addEventListener("input", performSearch);
+
+// 카테고리 선택만 해도 검색 자동 실행
+document.getElementById("category").addEventListener("change", performSearch);
+
+// Enter 키로 검색 실행
+document.getElementById("query").addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+        performSearch();
+    }
+});
+</script>
